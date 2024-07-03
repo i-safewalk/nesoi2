@@ -442,6 +442,9 @@ export class Task<
     ) {
         // 1. Get task by ID
         const task = await this.bucket.tasks.get(client, id)
+        if (task.state !== 'requested') {
+            throw NesoiError.Task.InvalidStateUpdate(this.name, task.id)
+        }
         if (!task) {
             throw NesoiError.Task.NotFound(this.name, id)
         }
