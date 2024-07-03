@@ -434,4 +434,35 @@ export class Task<
 
         return { task }
     }
+
+    public async _update(
+        client: Client,
+        id: number,
+        eventRaw: TaskStepEvent<Steps>
+    ) {
+        // 1. Get task by ID
+        const task = await this.bucket.tasks.get(client, id)
+        if (!task) {
+            throw NesoiError.Task.NotFound(this.name, id)
+        }
+
+        // 2. Run the task
+        const { event, outcome } = await this.requestStep.run(client, eventRaw, task.input task.id)
+        if (!task.output.data) {
+            task.output.data = {}
+        }
+        Object.assign(task.input, event)
+        Object.assign(task.output.data, outcome)
+
+        console.log(eventRaw, event, outcome, task)
+
+        // 3. Update task on data source
+        await this.bucket.tasks.put(client, task)
+
+        // 4. Log
+        await this.logStep(client, 'update', task, eventRaw);
+
+        return event
+    }
+
 }
