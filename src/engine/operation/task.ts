@@ -454,7 +454,7 @@ export class Task<
         Object.assign(task.input, event)
         Object.assign(task.output.data, outcome)
 
-        console.log(eventRaw, event, outcome, task)
+        // console.log(eventRaw, event, outcome, task)
 
         // 3. Update task on data source
         await this.bucket.tasks.put(client, task)
