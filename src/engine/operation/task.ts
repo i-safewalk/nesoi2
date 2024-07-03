@@ -447,7 +447,7 @@ export class Task<
         }
 
         // 2. Run the task
-        const { event, outcome } = await this.requestStep.run(client, eventRaw, task.input task.id)
+        const { event, outcome } = await this.requestStep.run(client, eventRaw, task.input, task.id)
         if (!task.output.data) {
             task.output.data = {}
         }
@@ -460,7 +460,7 @@ export class Task<
         await this.bucket.tasks.put(client, task)
 
         // 4. Log
-        await this.logStep(client, 'update', task, eventRaw);
+        // await this.logStep(client, 'update', task, eventRaw);
 
         return event
     }
