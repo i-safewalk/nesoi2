@@ -9,6 +9,7 @@ export type TaskAction =
     | 'comment'
     | 'graph'
     | 'cancel'
+    | 'update'
 
 export type TaskState =
     'requested'
