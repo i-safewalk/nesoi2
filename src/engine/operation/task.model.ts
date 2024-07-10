@@ -24,6 +24,7 @@ export type TaskStep = {
         name: string
     }
     timestamp: string
+    skiped?: boolean  // true if step was skiped
 }
 
 export interface TaskModel {
