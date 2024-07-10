@@ -224,7 +224,12 @@ export class Task<
             id: client.user.id,
             name: client.user.name,
         }
-        outputStep.timestamp = new Date().toISOString()
+        if ((eventRaw as any).advance_datetime_shift) {
+            outputStep.timestamp = (eventRaw as any).advance_datetime_shift
+        } else {
+            outputStep.timestamp = new Date().toISOString()
+        }
+        
 
         // 4. Advance
         if (next) {
@@ -378,6 +383,9 @@ export class Task<
         else if (action === 'execute') {
             return this.engine.string('task.execute.log');
         }
+        else if (action === 'update') {
+            return this.engine.string('task.update.log');
+        }
         return ''
     }
 
@@ -463,7 +471,7 @@ export class Task<
         await this.bucket.tasks.put(client, task)
 
         // 4. Log
-        // await this.logStep(client, 'update', task, eventRaw);
+        await this.logStep(client, 'update', task, eventRaw);
 
         return event
     }
