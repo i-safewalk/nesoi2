@@ -342,7 +342,8 @@ export class Task<
         const index = this.steps.findIndex(step => step.state === state);
         return {
             current: this.steps[index],
-            next: this.steps[index + 1]
+            next: this.steps[index + 1],
+            back: this.steps[index - 1]
         }
     }
 
@@ -489,4 +490,71 @@ export class Task<
         return event
     }
 
+    public async backward(
+        client: Client,
+        id: number,
+        eventRaw: TaskStepEvent<Steps>
+    ) {
+        // 1. Get task by ID
+        const task = await this.bucket.tasks.get(client, id)
+        if (!task) {
+            throw NesoiError.Task.NotFound(this.name, id)
+        }
+
+        // 2. Advance the task
+        const { current, event } = await this._backward(client, task, eventRaw);
+
+        // 3. Update task on data source
+        await this.bucket.tasks.put(client, task)
+
+        // 4. Log
+        await this.logStep(client, 'backward', task, event, current);
+
+        return task
+    }
+
+    private async _backward(
+        client: Client,
+        task: Omit<TaskModel, 'id'> & { id?: number },
+        eventRaw: TaskStepEvent<Steps>
+    ) {
+        // 1. Get current and next steps
+        const { current, next, back } = this.getStep(task.state)
+        if (!current) {
+            if (task.id) {
+                throw NesoiError.Task.InvalidState(this.name, task.id, task.state)
+            }
+            else {
+                throw NesoiError.Task.InvalidStateExecute(this.name, task.state)
+            }
+        }
+
+        // 2. Run step
+        // const { event, outcome } = await current.run(client, eventRaw, task.input, task.id);
+        // if (!task.output.data) {
+        //     task.output.data = {}
+        // }
+        // Object.assign(task.input, event)
+        // Object.assign(task.output.data, outcome)
+
+        // 3. Save step to output
+        const outputStep = task.output.steps.find(step => step.to_state === task.state);
+        if (outputStep) {
+           delete outputStep.user
+           delete outputStep.timestamp
+        }
+
+        // 4. Backward
+        if (back) {
+            task.state = back.state as any
+        }
+        else {
+            task.state = 'done'
+        }
+
+        task.updated_by = client.user.id
+        task.updated_at = new Date().toISOString()
+
+        return { current, event: task.input, task }
+    }
 }
