@@ -10,6 +10,7 @@ export type TaskAction =
     | 'graph'
     | 'cancel'
     | 'update'
+    | 'backward'
 
 export type TaskState =
     'requested'
@@ -19,12 +20,11 @@ export type TaskState =
 export type TaskStep = {
     from_state: 'void' | TaskState
     to_state: TaskState
-    user: {
+    user?: {
         id: number | string,
         name: string
     }
-    timestamp: string
-    skiped?: boolean  // true if step was skiped
+    timestamp?: string
 }
 
 export interface TaskModel {
