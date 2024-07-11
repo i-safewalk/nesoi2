@@ -7,7 +7,7 @@ export const NesoiStrings = {
     'task.execute.log': 'Executed',
     'task.update.log': 'Updated',    
     'task.cancel.log': 'Canceled',
-    'task.back.log': 'Canceled',
+    'task.back.log': 'Backward',
     'task.skip.log': 'Skipped',         
     'task.graph.child_of': 'Linked as child of task',
     'task.graph.parent_of': 'Linked as parent of task',

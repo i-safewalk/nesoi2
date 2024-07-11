@@ -400,6 +400,9 @@ export class Task<
         else if (action === 'skip') {
             return this.engine.string('task.skip.log');
         }
+        else if (action === 'backward') {
+            return this.engine.string('task.back.log');
+        }
         return ''
     }
 
@@ -542,6 +545,7 @@ export class Task<
         if (outputStep) {
            delete outputStep.user
            delete outputStep.timestamp
+           delete outputStep.skipped
         }
 
         // 4. Backward
