@@ -180,7 +180,13 @@ export class Task<
         await this.bucket.tasks.put(client, task)
 
         // 4. Log
-        await this.logStep(client, 'advance', task, event, current);
+        if ((eventRaw as any).advance_skip_step === 'true') {
+        
+            await this.logStep(client, 'skip', task, event, current);
+        } else {
+            await this.logStep(client, 'advance', task, event, current);
+        }
+
 
         return task
     }
@@ -229,7 +235,11 @@ export class Task<
         } else {
             outputStep.timestamp = new Date().toISOString()
         }
-        
+        if ((eventRaw as any).advance_skip_step === 'true') {
+            outputStep.skipped = true
+        } else {
+            outputStep.skipped = false
+        }
 
         // 4. Advance
         if (next) {
@@ -385,6 +395,9 @@ export class Task<
         }
         else if (action === 'update') {
             return this.engine.string('task.update.log');
+        }
+        else if (action === 'skip') {
+            return this.engine.string('task.skip.log');
         }
         return ''
     }
