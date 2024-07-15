@@ -41,6 +41,7 @@ export class TaskStepBuilder<
   protected fn!: Method
   protected logFn?: Method
   protected skipFn?: Method
+  protected backwardFn?: Method
 
   constructor(
     protected state: State
@@ -119,6 +120,17 @@ export class TaskStepBuilder<
     fn: Fn
   ) {
     this.skipFn = fn as any
+    return this as any as TaskStepBuilder<
+      Client, State, PreviousEvents, Event, Extra, Fn
+    >
+  }
+
+  public backward<
+    Fn extends TaskMethod<Client, Event & Extra, PreviousEvents, Record<string, any>>
+  >(
+    fn: Fn
+  ) {
+    this.backwardFn = fn as any
     return this as any as TaskStepBuilder<
       Client, State, PreviousEvents, Event, Extra, Fn
     >
