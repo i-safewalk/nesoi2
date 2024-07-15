@@ -271,7 +271,28 @@ class NesoiTaskClient<
         }
         return task.backward(this.client, id, input as never)
     }
-    
+
+    skip<
+        A extends Task<any, any>
+    >(
+        task: A,
+        id: number,
+        input: TaskStepEvent<A['steps'][number]>
+    ) {
+        return task.skip(this.client, id, input as never)
+    }
+
+    _skip(
+        taskName: keyof Engine['tasks'],
+        id: number,
+        input: Record<string, any>
+    ) {
+        const task = this.engine.tasks[taskName];
+        if (!task) {
+            throw NesoiError.Task.Invalid(taskName as string)
+        }
+        return task.skip(this.client, id, input as never)
+    }
 }
 
 export class NesoiClient<
