@@ -23,6 +23,7 @@ export class TaskStep {
     )[]
     public fn: TaskMethod<any, any, any, any>
     public logFn?: TaskMethod<any, any, any, string>
+    public skipFn?: TaskMethod<any, any, any, any>
 
     constructor(builder: any) {
         this.alias = builder.alias
@@ -31,6 +32,7 @@ export class TaskStep {
         this.conditionsAndExtras = builder.conditionsAndExtras
         this.fn = builder.fn
         this.logFn = builder.logFn
+        this.skipFn = builder.skipFn
     }
 
     public async run(client: any, eventRaw: any, taskInput: any, taskId?: number) {
@@ -58,6 +60,30 @@ export class TaskStep {
         return { event, outcome }
     }
 
+    public async skip(client: any, eventRaw: any, taskInput: any, taskId?: number) {
+        const event = await this.eventParser.parse(client, eventRaw);
+        for (let i in this.conditionsAndExtras) {
+            if (typeof this.conditionsAndExtras[i] === 'function') {
+                const extra = this.conditionsAndExtras[i] as TaskMethod<any, any, any, any>;
+                await Extra.run(extra,
+                    { client, event, input: taskInput },
+                    event)
+            }
+            else {
+                const condition = this.conditionsAndExtras[i] as TaskCondition<any, any, any>;
+                await Condition.check(condition,
+                    { client, event, input: taskInput })
+            }
+        }
+
+        if (!this.skipFn) {
+            return { event, outcome: {} }
+        }
+
+        const promise = this.skipFn({ id: taskId, client, event, input: taskInput });
+        const outcome = await Promise.resolve(promise)
+        return { event, outcome }
+    }
 }
 
 export class Task<
@@ -398,6 +424,18 @@ export class Task<
             return this.engine.string('task.update.log');
         }
         else if (action === 'skip') {
+            if (step?.skipFn) {
+                const promise = step.skipFn({
+                    id: task.id,
+                    client,
+                    event,
+                    input: task.input
+                })
+                return Promise.resolve(promise)
+            }
+            if (step?.alias?.done) {
+                return step?.alias?.done
+            }
             return this.engine.string('task.skip.log');
         }
         else if (action === 'backward') {
@@ -561,4 +599,88 @@ export class Task<
 
         return { current, event: task.input, task }
     }
+
+    public async skip(
+        client: Client,
+        id: number,
+        eventRaw: TaskStepEvent<Steps>
+    ) {
+        // 1. Get task by ID
+        const task = await this.bucket.tasks.get(client, id)
+        if (!task) {
+            throw NesoiError.Task.NotFound(this.name, id)
+        }
+
+        // 2. Advance the task
+        const { current, event } = await this._skip(client, task, eventRaw);
+
+        // 3. Update task on data source
+        await this.bucket.tasks.put(client, task)
+
+        // 4. Log
+        await this.logStep(client, 'skip', task, event, current);
+
+        return task
+    }
+
+    private async _skip(
+        client: Client,
+        task: Omit<TaskModel, 'id'> & { id?: number },
+        eventRaw: TaskStepEvent<Steps>
+    ) {
+        // 1. Get current and next steps
+        const { current, next } = this.getStep(task.state)
+        if (!current) {
+            if (task.id) {
+                throw NesoiError.Task.InvalidState(this.name, task.id, task.state)
+            }
+            else {
+                throw NesoiError.Task.InvalidStateExecute(this.name, task.state)
+            }
+        }
+
+        // 2. Run step
+        const { event, outcome } = await current.skip(client, eventRaw, task.input, task.id);
+        if (!task.output.data) {
+            task.output.data = {}
+        }
+        Object.assign(task.input, event)
+        Object.assign(task.output.data, outcome)
+
+        // 3. Save step to output
+        const outputStep = task.output.steps.find(step => !step.timestamp);
+        if (!outputStep || outputStep.from_state !== current.state) {
+            if (task.id) {
+                throw NesoiError.Task.InvalidOutputStep(this.name, task.id, task.state)
+            }
+            else {
+                throw NesoiError.Task.InvalidOutputStepExecute(this.name, task.state)
+            }
+        }
+
+        outputStep.user = {
+            id: client.user.id,
+            name: client.user.name,
+        }
+        if ((eventRaw as any).advance_datetime_shift) {
+            outputStep.timestamp = (eventRaw as any).advance_datetime_shift
+        } else {
+            outputStep.timestamp = new Date().toISOString()
+        }
+        outputStep.skipped = true
+
+        // 4. Advance
+        if (next) {
+            task.state = next.state as any
+        }
+        else {
+            task.state = 'done'
+        }
+
+        task.updated_by = client.user.id
+        task.updated_at = new Date().toISOString()
+
+        return { current, event, task }
+    }
+
 }
