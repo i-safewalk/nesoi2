@@ -24,6 +24,7 @@ export class TaskStep {
     public fn: TaskMethod<any, any, any, any>
     public logFn?: TaskMethod<any, any, any, string>
     public skipFn?: TaskMethod<any, any, any, any>
+    public backwardFn?: TaskMethod<any, any, any, any>
 
     constructor(builder: any) {
         this.alias = builder.alias
@@ -33,6 +34,7 @@ export class TaskStep {
         this.fn = builder.fn
         this.logFn = builder.logFn
         this.skipFn = builder.skipFn
+        this.backwardFn = builder.backwardFn
     }
 
     public async run(client: any, eventRaw: any, taskInput: any, taskId?: number) {
@@ -81,6 +83,31 @@ export class TaskStep {
         }
 
         const promise = this.skipFn({ id: taskId, client, event, input: taskInput });
+        const outcome = await Promise.resolve(promise)
+        return { event, outcome }
+    }
+
+    public async backward(client: any, eventRaw: any, taskInput: any, taskId?: number) {
+        const event = await this.eventParser.parse(client, eventRaw);
+        for (let i in this.conditionsAndExtras) {
+            if (typeof this.conditionsAndExtras[i] === 'function') {
+                const extra = this.conditionsAndExtras[i] as TaskMethod<any, any, any, any>;
+                await Extra.run(extra,
+                    { client, event, input: taskInput },
+                    event)
+            }
+            else {
+                const condition = this.conditionsAndExtras[i] as TaskCondition<any, any, any>;
+                await Condition.check(condition,
+                    { client, event, input: taskInput })
+            }
+        }
+
+        if (!this.backwardFn) {
+            return { event, outcome: {} }
+        }
+
+        const promise = this.backwardFn({ id: taskId, client, event, input: taskInput });
         const outcome = await Promise.resolve(promise)
         return { event, outcome }
     }
@@ -439,6 +466,18 @@ export class Task<
             return this.engine.string('task.skip.log');
         }
         else if (action === 'backward') {
+            if (step?.backwardFn) {
+                const promise = step.backwardFn({
+                    id: task.id,
+                    client,
+                    event,
+                    input: task.input
+                })
+                return Promise.resolve(promise)
+            }
+            if (step?.alias?.done) {
+                return step?.alias?.done
+            }
             return this.engine.string('task.back.log');
         }
         return ''

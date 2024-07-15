@@ -271,6 +271,7 @@ class NesoiTaskClient<
         }
         return task.backward(this.client, id, input as never)
     }
+    
 }
 
 export class NesoiClient<
