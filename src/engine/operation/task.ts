@@ -531,8 +531,7 @@ export class Task<
         task.updated_at = new Date().toISOString()
         let savedTask = await this.bucket.tasks.put(client, task)
 
-        await this.logStep(client, 'cancel', savedTask, null);
-
+        // await this.logStep(client, 'cancel', savedTask, null);
 
         return { task }
     }
