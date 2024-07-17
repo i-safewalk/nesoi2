@@ -234,13 +234,10 @@ export class Task<
 
         // 4. Log
         if ((eventRaw as any).advance_skip_step === 'true') {
-        
             await this.logStep(client, 'skip', task, event, current);
         } else {
             await this.logStep(client, 'advance', task, event, current);
         }
-
-
         return task
     }
 
@@ -580,7 +577,7 @@ export class Task<
             throw NesoiError.Task.NotFound(this.name, id)
         }
 
-        // 2. Advance the task
+        // 2. Backward the task
         const { current, event } = await this._backward(client, task, eventRaw);
 
         // 3. Update task on data source
@@ -609,7 +606,7 @@ export class Task<
         }
 
         // 2. Run step
-        // const { event, outcome } = await current.run(client, eventRaw, task.input, task.id);
+        const { event, outcome } = await current.backward(client, eventRaw, task.input, task.id);
         // if (!task.output.data) {
         //     task.output.data = {}
         // }
@@ -679,11 +676,11 @@ export class Task<
 
         // 2. Run step
         const { event, outcome } = await current.skip(client, eventRaw, task.input, task.id);
-        if (!task.output.data) {
-            task.output.data = {}
-        }
-        Object.assign(task.input, event)
-        Object.assign(task.output.data, outcome)
+        // if (!task.output.data) {
+        //     task.output.data = {}
+        // }
+        // Object.assign(task.input, event)
+        // Object.assign(task.output.data, outcome)
 
         // 3. Save step to output
         const outputStep = task.output.steps.find(step => !step.timestamp);
