@@ -561,7 +561,7 @@ export class Task<
         await this.bucket.tasks.put(client, task)
 
         // 4. Log
-        await this.logStep(client, 'update', task, eventRaw);
+        // await this.logStep(client, 'update', task, eventRaw);
 
         return event
     }
