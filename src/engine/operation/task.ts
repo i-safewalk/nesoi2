@@ -189,6 +189,14 @@ export class Task<
         Object.assign(taskEmpty.input, event)
         Object.assign(taskEmpty.output.data, outcome)
 
+        const outputStep = taskEmpty.output.steps.find(((step: { to_state: string; }) => step.to_state === 'requested'))
+        
+        if ((eventRaw as any).datetime) {
+            outputStep.timestamp = (eventRaw as any).datetime
+        } else {
+            outputStep.timestamp = new Date().toISOString()
+        }
+
         return { event, task: taskEmpty };
     }
 
