@@ -193,8 +193,11 @@ export class Task<
         
         if ((eventRaw as any).datetime) {
             outputStep.timestamp = (eventRaw as any).datetime
+            event.timestamp = (eventRaw as any).datetime
         } else {
-            outputStep.timestamp = new Date().toISOString()
+            const now = new Date().toISOString()
+            outputStep.timestamp = now
+            event.timestamp = now
         }
 
         return { event, task: taskEmpty };
@@ -244,6 +247,11 @@ export class Task<
         if ((eventRaw as any).advance_skip_step === 'true') {
             await this.logStep(client, 'skip', task, event, current);
         } else {
+            if ((eventRaw as any).advance_datetime_shift ) {
+                event.datetime = (eventRaw as any).advance_datetime_shift
+            } else {
+                event.datetime = new Date().toISOString()
+            }
             await this.logStep(client, 'advance', task, event, current);
         }
         return task
@@ -640,7 +648,7 @@ export class Task<
         task.updated_by = client.user.id
         task.updated_at = new Date().toISOString()
 
-        return { current, event: task.input, task }
+        return { current, event, task }
     }
 
     public async skip(
