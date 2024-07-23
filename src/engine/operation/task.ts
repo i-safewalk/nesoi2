@@ -191,9 +191,9 @@ export class Task<
 
         const outputStep = taskEmpty.output.steps.find(((step: { to_state: string; }) => step.to_state === 'requested'))
         
-        if ((eventRaw as any).datetime) {
-            outputStep.timestamp = (eventRaw as any).datetime
-            event.timestamp = (eventRaw as any).datetime
+        if ((eventRaw as any).timestamp) {
+            outputStep.timestamp = (eventRaw as any).timestamp
+            event.timestamp = (eventRaw as any).timestamp
         } else {
             const now = new Date().toISOString()
             outputStep.timestamp = now
@@ -248,9 +248,9 @@ export class Task<
             await this.logStep(client, 'skip', task, event, current);
         } else {
             if ((eventRaw as any).advance_datetime_shift ) {
-                event.datetime = (eventRaw as any).advance_datetime_shift
+                event.timestamp = (eventRaw as any).advance_datetime_shift
             } else {
-                event.datetime = new Date().toISOString()
+                event.timestamp = new Date().toISOString()
             }
             await this.logStep(client, 'advance', task, event, current);
         }
