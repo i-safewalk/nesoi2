@@ -191,9 +191,9 @@ export class Task<
 
         const outputStep = taskEmpty.output.steps.find(((step: { to_state: string; }) => step.to_state === 'requested'))
         
-        if ((eventRaw as any).timestamp) {
-            outputStep.timestamp = (eventRaw as any).timestamp
-            event.timestamp = (eventRaw as any).timestamp
+        if ((eventRaw as any)._timestamp_shift) {
+            outputStep.timestamp = (eventRaw as any)._timestamp_shift
+            event.timestamp = (eventRaw as any)._timestamp_shift
         } else {
             const now = new Date().toISOString()
             outputStep.timestamp = now
@@ -244,16 +244,12 @@ export class Task<
         await this.bucket.tasks.put(client, task)
 
         // 4. Log
-        if ((eventRaw as any).advance_skip_step === 'true') {
-            await this.logStep(client, 'skip', task, event, current);
+        if ((eventRaw as any)._timestamp_shift) {
+            event.timestamp = (eventRaw as any)._timestamp_shift
         } else {
-            if ((eventRaw as any).advance_datetime_shift ) {
-                event.timestamp = (eventRaw as any).advance_datetime_shift
-            } else {
-                event.timestamp = new Date().toISOString()
-            }
-            await this.logStep(client, 'advance', task, event, current);
+            event.timestamp = new Date().toISOString()
         }
+        await this.logStep(client, 'advance', task, event, current);
         return task
     }
 
@@ -296,8 +292,8 @@ export class Task<
             id: client.user.id,
             name: client.user.name,
         }
-        if ((eventRaw as any).advance_datetime_shift) {
-            outputStep.timestamp = (eventRaw as any).advance_datetime_shift
+        if ((eventRaw as any)._timestamp_shift) {
+            outputStep.timestamp = (eventRaw as any)._timestamp_shift
         } else {
             outputStep.timestamp = new Date().toISOString()
         }
@@ -571,8 +567,6 @@ export class Task<
         Object.assign(task.input, event)
         Object.assign(task.output.data, outcome)
 
-        // console.log(eventRaw, event, outcome, task)
-
         // 3. Update task on data source
         await this.bucket.tasks.put(client, task)
 
@@ -623,11 +617,6 @@ export class Task<
 
         // 2. Run step
         const { event, outcome } = await current.backward(client, eventRaw, task.input, task.id);
-        // if (!task.output.data) {
-        //     task.output.data = {}
-        // }
-        // Object.assign(task.input, event)
-        // Object.assign(task.output.data, outcome)
 
         // 3. Save step to output
         const outputStep = task.output.steps.find(step => step.to_state === task.state);
@@ -669,6 +658,11 @@ export class Task<
         await this.bucket.tasks.put(client, task)
 
         // 4. Log
+        if ((eventRaw as any)._timestamp_shift) {
+            event.timestamp = (eventRaw as any)._timestamp_shift
+        } else {
+            event.timestamp = new Date().toISOString()
+        }
         await this.logStep(client, 'skip', task, event, current);
 
         return task
@@ -713,8 +707,8 @@ export class Task<
             id: client.user.id,
             name: client.user.name,
         }
-        if ((eventRaw as any).advance_datetime_shift) {
-            outputStep.timestamp = (eventRaw as any).advance_datetime_shift
+        if ((eventRaw as any)._timestamp_shift) {
+            outputStep.timestamp = (eventRaw as any)._timestamp_shift
         } else {
             outputStep.timestamp = new Date().toISOString()
         }
