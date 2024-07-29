@@ -349,6 +349,13 @@ export class Task<
         if (!task) {
             throw NesoiError.Task.NotFound(this.name, id)
         }
+        if (event) {
+            if ((event as any)._timestamp_shift) {
+                event.timestamp = (event as any)._timestamp_shift
+            } else {
+                event.timestamp = new Date().toISOString()
+            }
+        }       
 
         // 2. Store comment as log
         const log: Omit<TaskLogModel<any>, 'id'> = {
