@@ -350,8 +350,8 @@ export class Task<
             throw NesoiError.Task.NotFound(this.name, id)
         }
         if (event) {
-            if ((event as any)._timestamp_shift) {
-                event.timestamp = (event as any)._timestamp_shift
+            if ((event as any).timestamp) {
+                event.timestamp = (event as any).timestamp
             } else {
                 event.timestamp = new Date().toISOString()
             }
