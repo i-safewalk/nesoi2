@@ -49,13 +49,15 @@ export class TaskGraph {
             relation: 'child_of',
             task_id: to.id,
             created_by: this.client.user.id,
-            created_at: NesoiDate.isoNow()
+            created_at: NesoiDate.isoNow(),
+            step: from.state
         })
         this.logs.push({
             type: 'link',
             from_task_id: from.id,
             to_task_id: to.id,
-            relation: 'child_of'
+            relation: 'child_of',
+            step: from.state
         })
         this.affectedTasks[from.id] = from
     }
@@ -75,13 +77,15 @@ export class TaskGraph {
             relation: 'parent_of',
             task_id: to.id,
             created_by: this.client.user.id,
-            created_at: NesoiDate.isoNow()
+            created_at: NesoiDate.isoNow(),
+            step: from.state
         })
         this.logs.push({
             type: 'link',
             from_task_id: from.id,
             to_task_id: to.id,
-            relation: 'parent_of'
+            relation: 'parent_of',
+            step: from.state
         })
         this.affectedTasks[from.id] = from
     }
@@ -99,7 +103,8 @@ export class TaskGraph {
             type: 'unlink',
             from_task_id: from.id,
             to_task_id: to.id,
-            relation: 'parent_of'
+            relation: 'parent_of',
+            step: from.state
         })
         this.affectedTasks[from.id] = from
     }
@@ -131,13 +136,15 @@ export class TaskGraph {
             relation: 'relates_to',
             task_id: to.id,
             created_by: this.client.user.id,
-            created_at: NesoiDate.isoNow()
+            created_at: NesoiDate.isoNow(),
+            step: from.state
         })
         this.logs.push({
             type: 'link',
             from_task_id: from.id,
             to_task_id: to.id,
-            relation: 'relates_to'
+            relation: 'relates_to',
+            step: from.state
         })
         this.affectedTasks[from.id] = from
     }

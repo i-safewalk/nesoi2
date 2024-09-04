@@ -21,7 +21,8 @@ export type TaskGraph = {
         relation: TaskGraphRelation
         task_id: number
         created_by: number | string
-        created_at: string
+        created_at: string,
+        step: string
     }[]
 }
 
@@ -29,5 +30,6 @@ export type TaskGraphLog = {
     type: 'link'|'unlink',
     from_task_id: number,
     to_task_id: number,
-    relation: TaskGraphRelation
+    relation: TaskGraphRelation,
+    step: string
 }
