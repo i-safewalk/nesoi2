@@ -190,7 +190,7 @@ export class Task<
         Object.assign(taskEmpty.output.data, outcome)
 
         const outputStep = taskEmpty.output.steps.find(((step: { to_state: string; }) => step.to_state === 'requested'))
-
+        
         if ((eventRaw as any)._timestamp_shift) {
             outputStep.timestamp = (eventRaw as any)._timestamp_shift
             event.timestamp = (eventRaw as any)._timestamp_shift
@@ -199,12 +199,7 @@ export class Task<
             outputStep.timestamp = now
             event.timestamp = now
         }
-        if ((eventRaw as any)._steps_duration) {
-            Object.keys((eventRaw as any)._steps_duration).forEach(propriedade => {
-                const taskStep = taskEmpty.output.steps.find(((step: { to_state: string; }) => step.to_state === propriedade))
-                taskStep.duration = parseInt((eventRaw as any)._steps_duration[propriedade])
-            });
-        }
+
         return { event, task: taskEmpty };
     }
 
@@ -360,7 +355,7 @@ export class Task<
             } else {
                 event.timestamp = new Date().toISOString()
             }
-        }
+        }       
 
         // 2. Store comment as log
         const log: Omit<TaskLogModel<any>, 'id'> = {
@@ -430,8 +425,7 @@ export class Task<
                 id: client.user.id,
                 name: client.user.name,
             },
-            timestamp: new Date().toISOString(),
-            duration: undefined
+            timestamp: new Date().toISOString()
         }] : []
 
         this.steps.forEach((step, i) => {
@@ -634,9 +628,9 @@ export class Task<
         // 3. Save step to output
         const outputStep = task.output.steps.find(step => step.to_state === task.state);
         if (outputStep) {
-            delete outputStep.user
-            delete outputStep.timestamp
-            delete outputStep.skipped
+           delete outputStep.user
+           delete outputStep.timestamp
+           delete outputStep.skipped
         }
 
         // 4. Backward
