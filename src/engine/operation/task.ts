@@ -200,9 +200,9 @@ export class Task<
             event.timestamp = now
         }
         if ((eventRaw as any)._steps_duration) {
-            Object.keys((eventRaw as any)._steps_duration).forEach(propriedade => {
-                const taskStep = taskEmpty.output.steps.find(((step: { to_state: string; }) => step.to_state === propriedade))
-                taskStep.duration = parseInt((eventRaw as any)._steps_duration[propriedade])
+            Object.keys((eventRaw as any)._steps_duration).forEach(property => {
+                const taskStep = taskEmpty.output.steps.find(((step: { from_state: string; }) => step.from_state === property))
+                taskStep.duration = parseInt((eventRaw as any)._steps_duration[property])
             });
         }
         return { event, task: taskEmpty };
