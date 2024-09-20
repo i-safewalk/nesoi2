@@ -283,7 +283,9 @@ export class Task<
         Object.assign(task.output.data, outcome)
 
         // 3. Save step to output
-        const outputStep = task.output.steps.find(step => !step.timestamp);
+        const outputStep = task.output.steps.find(step => !step.timestamp)
+        const prevStep = task.output.steps.find(step => step.to_state === outputStep?.from_state)
+
         if (!outputStep || outputStep.from_state !== current.state) {
             if (task.id) {
                 throw NesoiError.Task.InvalidOutputStep(this.name, task.id, task.state)
@@ -292,7 +294,6 @@ export class Task<
                 throw NesoiError.Task.InvalidOutputStepExecute(this.name, task.state)
             }
         }
-
         outputStep.user = {
             id: client.user.id,
             name: client.user.name,
@@ -306,6 +307,14 @@ export class Task<
             outputStep.skipped = true
         } else {
             outputStep.skipped = false
+        }
+        if (prevStep) {
+            const dateEnd = new Date(outputStep.timestamp as any).getTime()
+            const dateIni = new Date(prevStep.timestamp as any).getTime()
+            const diff = dateEnd - dateIni
+            const runtime = Math.floor(diff / (1000 * 60))
+            outputStep.runtime = runtime
+            Object.assign(event, { runtime })
         }
 
         // 4. Advance
@@ -637,6 +646,7 @@ export class Task<
             delete outputStep.user
             delete outputStep.timestamp
             delete outputStep.skipped
+            delete outputStep.runtime
         }
 
         // 4. Backward
