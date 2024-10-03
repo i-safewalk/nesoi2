@@ -248,12 +248,17 @@ export class Task<
         // 3. Update task on data source
         await this.bucket.tasks.put(client, task)
 
-        // 4. Log
+        // 4. timestamp Log
         if ((eventRaw as any)._timestamp_shift) {
             event.timestamp = (eventRaw as any)._timestamp_shift
         } else {
             event.timestamp = new Date().toISOString()
         }
+
+        // 5. state log
+        event.to_state = task.state
+        event.from_state = current.state
+
         await this.logStep(client, 'advance', task, event, current);
         return task
     }
