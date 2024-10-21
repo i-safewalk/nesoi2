@@ -234,7 +234,8 @@ export class Task<
     public async advance(
         client: Client,
         id: number,
-        eventRaw: TaskStepEvent<Steps>
+        eventRaw: TaskStepEvent<Steps>,
+        extra?: Record<string, any>
     ) {
         // 1. Get task by ID
         const task = await this.bucket.tasks.get(client, id)
@@ -243,7 +244,7 @@ export class Task<
         }
 
         // 2. Advance the task
-        const { current, event } = await this._advance(client, task, eventRaw);
+        const { current, event } = await this._advance(client, task, eventRaw, extra);
 
         // 3. Update task on data source
         await this.bucket.tasks.put(client, task)
@@ -266,7 +267,8 @@ export class Task<
     private async _advance(
         client: Client,
         task: Omit<TaskModel, 'id'> & { id?: number },
-        eventRaw: TaskStepEvent<Steps>
+        eventRaw: TaskStepEvent<Steps>,
+        extra?: Record<string, any>
     ) {
         // 1. Get current and next steps
         const { current, next } = this.getStep(task.state)
@@ -303,6 +305,8 @@ export class Task<
             id: client.user.id,
             name: client.user.name,
         }
+        Object.assign(outputStep, extra)
+        
         if ((eventRaw as any)._timestamp_shift) {
             outputStep.timestamp = (eventRaw as any)._timestamp_shift
         } else {
