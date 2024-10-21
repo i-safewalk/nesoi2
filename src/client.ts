@@ -147,7 +147,8 @@ class NesoiTaskClient<
     >(
         task: A,
         id: number,
-        input: TaskStepEvent<A['steps'][number]>
+        input: TaskStepEvent<A['steps'][number]>,
+        extra?: Record<string, any>
     ) {
         return task.advance(this.client, id, input as never)
     }
@@ -155,13 +156,14 @@ class NesoiTaskClient<
     _advance(
         taskName: keyof Engine['tasks'],
         id: number,
-        input: Record<string, any>
+        input: Record<string, any>,
+        extra?: Record<string, any>
     ) {
         const task = this.engine.tasks[taskName];
         if (!task) {
             throw NesoiError.Task.Invalid(taskName as string)
         }
-        return task.advance(this.client, id, input as never)
+        return task.advance(this.client, id, input as never, extra)
     }
 
     execute<
