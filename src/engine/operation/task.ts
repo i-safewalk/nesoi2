@@ -39,12 +39,13 @@ export class TaskStep {
 
     public async run(client: any, eventRaw: any, taskInput: any, taskId?: number) {
         const event = await this.eventParser.parse(client, eventRaw);
+        const stepData = {}
         for (let i in this.conditionsAndExtras) {
             if (typeof this.conditionsAndExtras[i] === 'function') {
                 const extra = this.conditionsAndExtras[i] as TaskMethod<any, any, any, any>;
                 await Extra.run(extra,
                     { client, event, input: taskInput },
-                    event)
+                    event, stepData)
             }
             else {
                 const condition = this.conditionsAndExtras[i] as TaskCondition<any, any, any>;
@@ -54,22 +55,23 @@ export class TaskStep {
         }
 
         if (!this.fn) {
-            return { event, outcome: {} }
+            return { event, outcome: {}, stepData }
         }
 
         const promise = this.fn({ id: taskId, client, event, input: taskInput });
         const outcome = await Promise.resolve(promise)
-        return { event, outcome }
+        return { event, outcome, stepData }
     }
 
     public async skip(client: any, eventRaw: any, taskInput: any, taskId?: number) {
         const event = await this.eventParser.parse(client, eventRaw);
+        const stepData = {}
         for (let i in this.conditionsAndExtras) {
             if (typeof this.conditionsAndExtras[i] === 'function') {
                 const extra = this.conditionsAndExtras[i] as TaskMethod<any, any, any, any>;
                 await Extra.run(extra,
                     { client, event, input: taskInput },
-                    event)
+                    event, stepData)
             }
             else {
                 const condition = this.conditionsAndExtras[i] as TaskCondition<any, any, any>;
@@ -88,13 +90,14 @@ export class TaskStep {
     }
 
     public async backward(client: any, eventRaw: any, taskInput: any, taskId?: number) {
-        const event = await this.eventParser.parse(client, eventRaw);
+        const event = await this.eventParser.parse(client, eventRaw)
+        const stepData = {}
         for (let i in this.conditionsAndExtras) {
             if (typeof this.conditionsAndExtras[i] === 'function') {
                 const extra = this.conditionsAndExtras[i] as TaskMethod<any, any, any, any>;
                 await Extra.run(extra,
                     { client, event, input: taskInput },
-                    event)
+                    event, stepData)
             }
             else {
                 const condition = this.conditionsAndExtras[i] as TaskCondition<any, any, any>;
@@ -184,12 +187,13 @@ export class Task<
         const taskEmpty = await this._save(client);
 
         // 1. Run request step to built request object
-        const { event, outcome } = await this.requestStep.run(client, eventRaw, {}, taskEmpty.id)
+        const { event, outcome, stepData } = await this.requestStep.run(client, eventRaw, {}, taskEmpty.id)
 
         Object.assign(taskEmpty.input, event)
         Object.assign(taskEmpty.output.data, outcome)
 
         const outputStep = taskEmpty.output.steps.find(((step: { to_state: string; }) => step.to_state === 'requested'))
+        outputStep.data = stepData
 
         if ((eventRaw as any)._timestamp_shift) {
             outputStep.timestamp = (eventRaw as any)._timestamp_shift
@@ -282,7 +286,7 @@ export class Task<
         }
 
         // 2. Run step
-        const { event, outcome } = await current.run(client, eventRaw, task.input, task.id);
+        const { event, outcome, stepData } = await current.run(client, eventRaw, task.input, task.id);
         if (!task.output.data) {
             task.output.data = {}
         }
@@ -305,8 +309,8 @@ export class Task<
             id: client.user.id,
             name: client.user.name,
         }
-        Object.assign(outputStep, extra)
-        
+        outputStep.data = stepData
+
         if ((eventRaw as any)._timestamp_shift) {
             outputStep.timestamp = (eventRaw as any)._timestamp_shift
         } else {
@@ -325,7 +329,7 @@ export class Task<
             outputStep.runtime = runtime
             Object.assign(event, { runtime })
         }
-
+    
         // 4. Advance
         if (next) {
             task.state = next.state as any
