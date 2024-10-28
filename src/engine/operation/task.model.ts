@@ -28,8 +28,8 @@ export type TaskStep = {
     timestamp?: string
     skipped?: boolean  // true if step was skipped
     duration?: number | undefined
-    runtime?: number | undefined,
-    [key: string]: any
+    runtime?: number | undefined
+    data?: Record<string, any> | undefined
 }
 
 export interface TaskModel {
