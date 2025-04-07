@@ -31,6 +31,7 @@ export class TaskStepBuilder<
   Client,
   State extends string,
   PreviousEvents,
+  RequestEvent,
   Event = unknown,
   Extra = unknown,
   Method = unknown
@@ -39,6 +40,7 @@ export class TaskStepBuilder<
   protected eventParser!: EventParserBuilder
   protected conditionsAndExtras: (TaskCondition<any, any, any> | TaskMethod<any, any, any, any>)[] = []
   protected fn!: Method
+  protected updateFn?: Method
   protected logFn?: Method
   protected skipFn?: Method
   protected backwardFn?: Method
@@ -60,6 +62,7 @@ export class TaskStepBuilder<
       Client,
       State,
       PreviousEvents,
+      State extends 'void' ? EventInputFromParser<Parser> : RequestEvent,
       EventInputFromParser<Parser>,
       Extra,
       Method
@@ -70,7 +73,7 @@ export class TaskStepBuilder<
     Ext extends { [_: string]: any },
     g_Event extends Record<string, any>
   >(
-    this: TaskStepBuilder<Client, State, PreviousEvents, g_Event, Extra>, // Guarantee preceding event
+    this: TaskStepBuilder<Client, State, PreviousEvents, RequestEvent, g_Event, Extra>, // Guarantee preceding event
     extra: TaskMethod<Client, Event & Extra, PreviousEvents, Ext>
   ) {
     this.conditionsAndExtras.push(extra as any)
@@ -78,6 +81,7 @@ export class TaskStepBuilder<
       Client,
       State,
       PreviousEvents,
+      RequestEvent,
       Event,
       Extra & { [K in keyof Ext]: Ext[K] }, // with.Extra
       Method
@@ -87,7 +91,7 @@ export class TaskStepBuilder<
   public given<
     g_Event extends Record<string, any>
   >(
-    this: TaskStepBuilder<Client, State, PreviousEvents, g_Event, Extra>, // Guarantee preceding event
+    this: TaskStepBuilder<Client, State, PreviousEvents, RequestEvent, g_Event, Extra>, // Guarantee preceding event
     condition: TaskCondition<Client, Event & Extra, PreviousEvents>
   ) {
     this.conditionsAndExtras.push(condition as any)
@@ -101,7 +105,18 @@ export class TaskStepBuilder<
   ) {
     this.fn = fn as any
     return this as any as TaskStepBuilder<
-      Client, State, PreviousEvents, Event, Extra, Fn
+      Client, State, PreviousEvents, RequestEvent, Event, Extra, Fn
+    >
+  }
+
+  public doOnUpdate<
+    Fn extends TaskMethod<Client, RequestEvent, PreviousEvents, void>
+  >(
+    fn: Fn
+  ) {
+    this.updateFn = fn as any
+    return this as any as TaskStepBuilder<
+      Client, State, PreviousEvents, RequestEvent, Event, Extra, Fn
     >
   }
 
@@ -121,7 +136,7 @@ export class TaskStepBuilder<
   ) {
     this.skipFn = fn as any
     return this as any as TaskStepBuilder<
-      Client, State, PreviousEvents, Event, Extra, Fn
+      Client, State, PreviousEvents, RequestEvent, Event, Extra, Fn
     >
   }
 
@@ -132,7 +147,7 @@ export class TaskStepBuilder<
   ) {
     this.backwardFn = fn as any
     return this as any as TaskStepBuilder<
-      Client, State, PreviousEvents, Event, Extra, Fn
+      Client, State, PreviousEvents, RequestEvent, Event, Extra, Fn
     >
   }
 
@@ -141,8 +156,8 @@ export class TaskStepBuilder<
   }
 }
 
-export type TaskStepEvent<Step> = Step extends TaskStepBuilder<any, any, any, infer X> ? X : {}
-export type TaskStepExtra<Step> = Step extends TaskStepBuilder<any, any, any, any, infer X> ? X : {}
+export type TaskStepEvent<Step> = Step extends TaskStepBuilder<any, any, any, any, infer X> ? X : {}
+export type TaskStepExtra<Step> = Step extends TaskStepBuilder<any, any, any, any, any, infer X> ? X : {}
 
 export class TaskBuilder<
   Client extends NesoiClient<any, any>,
@@ -161,7 +176,7 @@ export class TaskBuilder<
   ) { }
 
   public alias<
-    Step extends $TaskStep<Client, 'void', {}, any>
+    Step extends $TaskStep<Client, 'void', {}, any, any>
   >(
     $: Step
   ) {
@@ -176,7 +191,7 @@ export class TaskBuilder<
   }
 
   public request<
-    Step extends $TaskStep<Client, 'void', {}, any>
+    Step extends $TaskStep<Client, 'void', {}, any, any>
   >(
     $: Step
   ) {
@@ -196,9 +211,10 @@ export class TaskBuilder<
       Client,
       S,
       TaskStepEvent<RequestStep> & TaskStepEvent<Steps> & TaskStepExtra<RequestStep> & TaskStepExtra<Steps>,
+      TaskStepEvent<RequestStep> & TaskStepExtra<RequestStep>,
       any
     >,
-    IsFirstStep = Steps extends TaskStepBuilder<any, any, any, any, any> ? false : true
+    IsFirstStep = Steps extends TaskStepBuilder<any, any, any, any, any, any> ? false : true
   >(
     state: S,
     $: Step
@@ -234,7 +250,8 @@ export type $TaskStep<
   Client,
   State extends string,
   PreviousEvents,
+  RequestEvent,
   Event
 > =
-  ($: TaskStepBuilder<Client, State, PreviousEvents, Event>) =>
-    TaskStepBuilder<Client, State, PreviousEvents, Event>
+  ($: TaskStepBuilder<Client, State, PreviousEvents, RequestEvent, Event>) =>
+    TaskStepBuilder<Client, State, PreviousEvents, RequestEvent, Event>
