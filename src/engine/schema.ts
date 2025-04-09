@@ -27,6 +27,12 @@ export type EventPropSchema = {
     method: EventParseMethod<any,any>
     rules: EventParserRule<any,any>[]
     isArray: boolean
+    meta?: {
+        id: {
+            bucket: string
+            propObjName: string
+        }
+    }
 }
 
 export type EventSchema = {

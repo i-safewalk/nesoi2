@@ -45,6 +45,7 @@ export class Bucket<
 
     constructor(
         private adapter: BucketAdapter<Obj, Views>,
+        private aliasKey?: string,
         private views = {} as Views
     ) { }
 
@@ -107,5 +108,10 @@ export class Bucket<
         return Promise.all(
             objs.map(obj => this.views[view].parse(obj))
         )
+    }
+
+    static getAlias(bucket: Bucket<any>, obj: Record<string, any>) {
+        if (!bucket.aliasKey) return obj.id;
+        return obj[bucket.aliasKey];
     }
 }

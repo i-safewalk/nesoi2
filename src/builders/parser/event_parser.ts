@@ -51,7 +51,13 @@ export class EventParserPropBuilder<I, O> {
 
     constructor(
         private alias: string,
-        private method: EventParseMethod<I, O>
+        private method: EventParseMethod<I, O>,
+        private meta?: {
+            id: {
+                bucket: string
+                propObjName: string
+            }
+        }
     ) { }
 
     optional(defaultValue?: O) {
@@ -186,12 +192,13 @@ export function EventParserPropFactory(
                     if (Number.isNaN(val) || typeof val !== 'number') {
                         throw NesoiError.Event.Parse(prop, 'a ID')
                     }
-                    const propObjName = propName.replace(/_ids?$/, '')
+                    const propObjName = propName.replace(/_ids?$/, '');
+                    (prop as any).meta.id.propObjName = propObjName;
                     return {
                         [propName]: val,
                         [propObjName]: await client.data.readOneOrFail(source, val)
                     }
-                })
+                }, { id: { bucket: source, propObjName: '' } })
         },
 
         int: new EventParserPropBuilder<number, number>(alias,

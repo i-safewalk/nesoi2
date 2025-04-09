@@ -314,4 +314,8 @@ export class NesoiClient<
         this.user = app.user
         Object.assign(this, app)
     }
+
+    public bucket(name: keyof Engine['buckets']): Bucket<any> {
+        return this.engine.buckets[name];
+    }
 }

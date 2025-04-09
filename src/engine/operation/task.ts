@@ -12,6 +12,8 @@ import { Resource } from "../resource";
 import { ScheduleEventType } from "./schedule.model";
 import { TaskGraph } from "./graph";
 import { NesoiEngine } from "../../engine";
+import { EventPropSchema } from "../schema";
+import { Bucket } from "../data/bucket";
 
 export class TaskStep {
     public alias?: TaskStepAlias
@@ -22,6 +24,7 @@ export class TaskStep {
         | TaskMethod<any, any, any, any>
     )[]
     public fn: TaskMethod<any, any, any, any>
+    public updateFn?: TaskMethod<any, any, any, any>
     public logFn?: TaskMethod<any, any, any, string>
     public skipFn?: TaskMethod<any, any, any, any>
     public backwardFn?: TaskMethod<any, any, any, any>
@@ -32,6 +35,7 @@ export class TaskStep {
         this.eventParser = new EventParser('', builder.eventParser)
         this.conditionsAndExtras = builder.conditionsAndExtras
         this.fn = builder.fn
+        this.updateFn = builder.updateFn
         this.logFn = builder.logFn
         this.skipFn = builder.skipFn
         this.backwardFn = builder.backwardFn
@@ -61,6 +65,125 @@ export class TaskStep {
         const promise = this.fn({ id: taskId, client, event, input: taskInput });
         const outcome = await Promise.resolve(promise)
         return { event, outcome, stepData }
+    }
+
+    public async runUpdate(client: any, eventRaw: any, taskInput: any, step: TaskStep, taskId?: number) {
+        const event = await this.eventParser.parse(client, eventRaw);
+        const stepData = {}
+
+        for (let i in this.conditionsAndExtras) {
+            if (typeof this.conditionsAndExtras[i] === 'function') {
+                const extra = this.conditionsAndExtras[i] as TaskMethod<any, any, any, any>;
+                await Extra.run(extra,
+                    { client, event, input: taskInput },
+                    event, stepData)
+            }
+            else {
+                const condition = this.conditionsAndExtras[i] as TaskCondition<any, any, any>;
+                await Condition.check(condition,
+                    { client, event, input: taskInput })
+            }
+        }
+
+        const diff = this.diff(client, event, taskInput)
+        const updateFn = step.updateFn || this.updateFn
+
+        if (!updateFn) {
+            return { event, stepData, diff }
+        }
+
+        const promise = updateFn({ id: taskId, client, event, input: taskInput });
+        const outcome = await Promise.resolve(promise)
+        return { event, stepData, diff, outcome }
+    }
+
+    private diff (client: NesoiClient<any, any>, newObj: any, oldObj: any) {
+        const schema = this.eventParser.schema
+        const diff: {
+            action: 'insert' | 'delete' | 'update',
+            alias: string
+            old_value: any,
+            new_value: any
+        }[] = []
+
+        for (const key in schema) {
+            const prop = schema[key] as EventPropSchema
+            let action: typeof diff[number]['action'];
+
+            let oldVal = oldObj[key];
+            let newVal = newObj[key];
+            if (prop.isArray) {
+                const sameLength = oldVal?.length === newVal?.length
+                const areEqual = oldVal?.every((item: any) => newVal?.includes(item))
+                const isOldEmpty = oldVal == null || oldVal?.length === 0
+                const isNewEmpty = newVal == null || newVal?.length === 0
+                if (sameLength && areEqual) {
+                    continue
+                }
+                if (isOldEmpty && newVal?.length > 0) {
+                    action = 'insert'
+                } else if (isNewEmpty && oldVal?.length > 0) {
+                    action = 'delete'
+                } else {
+                    action = 'update'
+                }
+            } else {
+                if (newVal == oldVal) { continue }
+                if (oldVal == null) {
+                    action = 'insert'
+                } else if (newVal == null) {
+                    action = 'delete'
+                } else {
+                    action = 'update'
+                }
+            }
+
+            const isId = (prop.meta && 'id' in prop.meta)
+            // Isso é necessário porque algumas tasks não definem o campo como id,
+            // e sim como um int que depois é utilizado no .with()
+            const isIntId = (key.endsWith('_id') || key.endsWith('_ids'))
+
+            let bucketName = prop.meta?.id.bucket;
+            let propObjName = prop.meta?.id.propObjName;
+            if (isIntId && !isId) {
+                const match = key.match(/(to_)?(\w+)_ids?/);
+                if (match) {
+                    bucketName = match[2];
+                    propObjName = (match[1] || '') + match[2];
+                }
+            }
+
+            if (bucketName && propObjName) {
+                const bucket = client.bucket(bucketName);
+                if (Array.isArray(oldVal)) {
+                    oldVal = oldObj[propObjName].map((v: any) =>
+                        ({ id: v.id, alias: Bucket.getAlias(bucket, v) })
+                    )
+                }
+                else {
+                    const v = oldObj[propObjName];
+                    oldVal = { id: v.id, alias: Bucket.getAlias(bucket, v) }
+                }
+                if (Array.isArray(newVal)) {
+                    newVal = newObj[propObjName].map((v: any) =>
+                        ({ id: v.id, alias: Bucket.getAlias(bucket, v) })
+                    )
+                }
+                else {
+                    const v = newObj[propObjName];
+                    newVal = { id: v.id, alias: Bucket.getAlias(bucket, v) }
+                }
+            }
+
+            diff.push({
+                action,
+                alias: prop.alias,
+                old_value: oldVal,
+                new_value: newVal
+            })
+        }
+
+        return diff
     }
 
     public async skip(client: any, eventRaw: any, taskInput: any, taskId?: number) {
@@ -329,7 +452,7 @@ export class Task<
             outputStep.runtime = runtime
             Object.assign(event, { runtime })
         }
-    
+
         // 4. Advance
         if (next) {
             task.state = next.state as any
@@ -564,6 +687,24 @@ export class Task<
         await this.bucket.logs.put(client, log)
     }
 
+    private async logUpdate<Event>(client: Client, task: TaskModel, event: Event) {
+        const log: Omit<TaskLogModel<any>, 'id'> = {
+            task_id: task.id,
+            task_type: this.name,
+            action: 'update',
+            state: task.state,
+            message: this.engine.string('task.update.log'),
+            event,
+            timestamp: new Date().toISOString(),
+            user: (client.user as any).name,
+            created_by: client.user.id,
+            updated_by: client.user.id,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        }
+        await this.bucket.logs.put(client, log)
+    }
+
     public async cancel(
         client: Client,
         id: number
@@ -587,26 +728,37 @@ export class Task<
     ) {
         // 1. Get task by ID
         const task = await this.bucket.tasks.get(client, id)
-        if (task.state !== 'requested') {
+        if (task.state === 'done') {
             throw NesoiError.Task.InvalidStateUpdate(this.name, task.id)
         }
         if (!task) {
             throw NesoiError.Task.NotFound(this.name, id)
         }
 
-        // 2. Run the task
-        const { event, outcome } = await this.requestStep.run(client, eventRaw, task.input, task.id)
+        // 2. Get the current step
+        const { current } = this.getStep(task.state)
+        if (!current) {
+            if (task.id) {
+                throw NesoiError.Task.InvalidState(this.name, task.id, task.state)
+            }
+            else {
+                throw NesoiError.Task.InvalidStateExecute(this.name, task.state)
+            }
+        }
+
+        // 3. Run the task
+        const { event, outcome, diff } = await this.requestStep.runUpdate(client, eventRaw, task.input, current, task.id)
         if (!task.output.data) {
             task.output.data = {}
         }
         Object.assign(task.input, event)
         Object.assign(task.output.data, outcome)
 
-        // 3. Update task on data source
+        // 4. Update task on data source
         await this.bucket.tasks.put(client, task)
 
-        // 4. Log
-        // await this.logStep(client, 'update', task, eventRaw);
+        // 5. Log
+        await this.logUpdate(client, task, { diff });
 
         return event
     }
