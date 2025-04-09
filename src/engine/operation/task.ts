@@ -13,6 +13,7 @@ import { ScheduleEventType } from "./schedule.model";
 import { TaskGraph } from "./graph";
 import { NesoiEngine } from "../../engine";
 import { EventPropSchema } from "../schema";
+import { Bucket } from "../data/bucket";
 
 export class TaskStep {
     public alias?: TaskStepAlias
@@ -84,7 +85,7 @@ export class TaskStep {
             }
         }
 
-        const diff = this.diff(event, taskInput)
+        const diff = this.diff(client, event, taskInput)
         const updateFn = step.updateFn || this.updateFn
 
         if (!updateFn) {
@@ -96,7 +97,7 @@ export class TaskStep {
         return { event, stepData, diff, outcome }
     }
 
-    private diff (newObj: any, oldObj: any) {
+    private diff (client: NesoiClient<any, any>, newObj: any, oldObj: any) {
         const schema = this.eventParser.schema
         const diff: {
             action: 'insert' | 'delete' | 'update',
@@ -109,37 +110,76 @@ export class TaskStep {
             const prop = schema[key] as EventPropSchema
             let action: typeof diff[number]['action'];
 
+            let oldVal = oldObj[key];
+            let newVal = newObj[key];
             if (prop.isArray) {
-                const sameLength = oldObj[key]?.length === newObj[key]?.length
-                const areEqual = oldObj[key]?.every((item: any) => newObj[key]?.includes(item))
-                const isOldEmpty = oldObj[key] == null || oldObj[key]?.length === 0
-                const isNewEmpty = newObj[key] == null || newObj[key]?.length === 0
+                const sameLength = oldVal?.length === newVal?.length
+                const areEqual = oldVal?.every((item: any) => newVal?.includes(item))
+                const isOldEmpty = oldVal == null || oldVal?.length === 0
+                const isNewEmpty = newVal == null || newVal?.length === 0
                 if (sameLength && areEqual) {
                     continue
                 }
-                if (isOldEmpty && newObj[key]?.length > 0) {
+                if (isOldEmpty && newVal?.length > 0) {
                     action = 'insert'
-                } else if (isNewEmpty && oldObj[key]?.length > 0) {
+                } else if (isNewEmpty && oldVal?.length > 0) {
                     action = 'delete'
                 } else {
                     action = 'update'
                 }
             } else {
-                if (newObj[key] == oldObj[key]) { continue }
-                if (oldObj[key] == null) {
+                if (newVal == oldVal) { continue }
+                if (oldVal == null) {
                     action = 'insert'
-                } else if (newObj[key] == null) {
+                } else if (newVal == null) {
                     action = 'delete'
                 } else {
                     action = 'update'
                 }
             }
 
+            const isId = (prop.meta && 'id' in prop.meta)
+            // Isso é necessário porque algumas tasks não definem o campo como id,
+            // e sim como um int que depois é utilizado no .with()
+            const isIntId = (key.endsWith('_id') || key.endsWith('_ids'))
+
+            let bucketName = prop.meta?.id.bucket;
+            let propObjName = prop.meta?.id.propObjName;
+            if (isIntId && !isId) {
+                const match = key.match(/(to_)?(\w+)_ids?/);
+                if (match) {
+                    bucketName = match[2];
+                    propObjName = (match[1] || '') + match[2];
+                }
+            }
+
+            if (bucketName && propObjName) {
+                const bucket = client.bucket(bucketName);
+                if (Array.isArray(oldVal)) {
+                    oldVal = oldObj[propObjName].map((v: any) =>
+                        ({ id: v.id, alias: Bucket.getAlias(bucket, v) })
+                    )
+                }
+                else {
+                    const v = oldObj[propObjName];
+                    oldVal = { id: v.id, alias: Bucket.getAlias(bucket, v) }
+                }
+                if (Array.isArray(newVal)) {
+                    newVal = newObj[propObjName].map((v: any) =>
+                        ({ id: v.id, alias: Bucket.getAlias(bucket, v) })
+                    )
+                }
+                else {
+                    const v = newObj[propObjName];
+                    newVal = { id: v.id, alias: Bucket.getAlias(bucket, v) }
+                }
+            }
+
             diff.push({
                 action,
                 alias: prop.alias,
-                old_value: oldObj[key],
-                new_value: newObj[key]
+                old_value: oldVal,
+                new_value: newVal
             })
         }
 

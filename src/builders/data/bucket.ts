@@ -16,12 +16,20 @@ export class BucketBuilder<
     private data = {} as Record<any, any>
     private meta = {} as Record<any, any>
     private views = {} as Views
+    private _aliasKey?: string;
 
     constructor(
         private adapter: Adapter,
         private onBuild?: (bucket: Bucket<Obj, Views>) => void
     ) {
 
+    }
+
+    aliasKey(
+        key: keyof Obj
+    ) {
+        this._aliasKey = key as string;
+        return this;
     }
 
     view<
@@ -44,7 +52,7 @@ export class BucketBuilder<
 
     build(...adapterConstructorArgs: ConstructorParameters<Adapter>) {
         const adapter = new this.adapter(...adapterConstructorArgs as any);
-        const bucket = new Bucket<Obj, Views>(adapter, this.views)
+        const bucket = new Bucket<Obj, Views>(adapter, this._aliasKey, this.views)
         if (this.onBuild) {
             this.onBuild(bucket)
         }
