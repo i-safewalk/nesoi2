@@ -149,7 +149,10 @@ export class TaskStep {
                 const match = key.match(/(to_)?(\w+)_ids?/);
                 if (match) {
                     bucketName = match[2];
-                    propObjName = (match[1] || '') + match[2];
+                    propObjName = match[2]
+                    if (!(propObjName in oldObj) && !(propObjName in newObj)) {
+                        propObjName = (match[1] || '') + match[2];
+                    }
                 }
             }
 
