@@ -17,6 +17,7 @@ export type TaskState =
     'requested'
     | 'done'
     | 'canceled'
+    | 'interrupted'
 
 export type TaskStep = {
     from_state: 'void' | TaskState

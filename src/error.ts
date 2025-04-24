@@ -44,10 +44,6 @@ export namespace NesoiError {
             return new BaseError(`Execute task ${name} has no output step for state ${state}`)
         }
 
-        export function InvalidStateCancel(name: string, state: string) {
-            return new BaseError(`Task ${name} cannot be canceled`)
-        }
-
         export function InvalidStateUpdate(name: string, state: string) {
             return new BaseError(`Task ${name} cannot be updated`)
         }

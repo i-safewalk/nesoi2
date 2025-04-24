@@ -240,6 +240,14 @@ class NesoiTaskClient<
         return task.cancel(this.client, id)
     }
 
+    interrupt(
+        taskName: keyof Engine['tasks'],
+        id: number,
+    ) {
+        const task = this.engine.tasks[taskName];
+        return task.interrupt(this.client, id)
+    }
+
     _update(
         taskName: keyof Engine['tasks'],
         id: number,
