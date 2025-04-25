@@ -9,6 +9,7 @@ export type TaskAction =
     | 'comment'
     | 'graph'
     | 'cancel'
+    | 'interrupt'
     | 'update'
     | 'backward'
     | 'skip'
@@ -17,6 +18,7 @@ export type TaskState =
     'requested'
     | 'done'
     | 'canceled'
+    | 'interrupted'
 
 export type TaskStep = {
     from_state: 'void' | TaskState

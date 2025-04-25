@@ -620,6 +620,12 @@ export class Task<
         else if (action === 'update') {
             return this.engine.string('task.update.log');
         }
+        else if (action === 'interrupt') {
+            return this.engine.string('task.interrupt.log');
+        }
+        else if (action === 'cancel') {
+            return this.engine.string('task.cancel.log');
+        }
         else if (action === 'skip') {
             if (step?.skipFn) {
                 const promise = step.skipFn({
@@ -719,7 +725,23 @@ export class Task<
         task.updated_at = new Date().toISOString()
         let savedTask = await this.bucket.tasks.put(client, task)
 
-        // await this.logStep(client, 'cancel', savedTask, null);
+        await this.logStep(client, 'cancel', savedTask, null);
+
+        return { task }
+    }
+
+    public async interrupt(
+        client: Client,
+        id: number
+    ) {
+        const task = await this.bucket.tasks.get(client, id)
+
+        task.state = 'interrupted'
+        task.updated_by = client.user.id
+        task.updated_at = new Date().toISOString()
+        let savedTask = await this.bucket.tasks.put(client, task)
+
+        await this.logStep(client, 'interrupt', savedTask, null);
 
         return { task }
     }
