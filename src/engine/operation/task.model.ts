@@ -9,6 +9,7 @@ export type TaskAction =
     | 'comment'
     | 'graph'
     | 'cancel'
+    | 'interrupt'
     | 'update'
     | 'backward'
     | 'skip'
