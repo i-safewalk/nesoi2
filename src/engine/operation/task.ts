@@ -159,22 +159,22 @@ export class TaskStep {
             if (bucketName && propObjName) {
                 const bucket = client.bucket(bucketName);
                 if (Array.isArray(oldVal)) {
-                    oldVal = oldObj[propObjName].map((v: any) =>
+                    oldVal = oldObj?.[propObjName]?.map((v: any) =>
                         ({ id: v.id, alias: Bucket.getAlias(bucket, v) })
                     )
                 }
                 else {
-                    const v = oldObj[propObjName];
-                    oldVal = { id: v.id, alias: Bucket.getAlias(bucket, v) }
+                    const v = oldObj?.[propObjName];
+                    oldVal = v ? { id: v.id, alias: Bucket.getAlias(bucket, v) } : undefined
                 }
                 if (Array.isArray(newVal)) {
-                    newVal = newObj[propObjName].map((v: any) =>
+                    newVal = newObj?.[propObjName]?.map((v: any) =>
                         ({ id: v.id, alias: Bucket.getAlias(bucket, v) })
                     )
                 }
                 else {
-                    const v = newObj[propObjName];
-                    newVal = { id: v.id, alias: Bucket.getAlias(bucket, v) }
+                    const v = newObj?.[propObjName];
+                    newVal = v ? { id: v.id, alias: Bucket.getAlias(bucket, v) } : undefined
                 }
             }
 
