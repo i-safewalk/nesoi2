@@ -15,6 +15,8 @@ import { NesoiEngine } from "../../engine";
 import { EventPropSchema } from "../schema";
 import { Bucket } from "../data/bucket";
 
+const deleteSymbol = Symbol('delete')
+
 export class TaskStep {
     public alias?: TaskStepAlias
     public state: string
@@ -86,6 +88,13 @@ export class TaskStep {
         }
 
         const diff = this.diff(client, event, taskInput)
+
+        for (const k in event) {
+            if (taskInput[k] != null && event[k] == null) {
+                event[k] = deleteSymbol
+            }
+        }
+
         const updateFn = step.updateFn || this.updateFn
 
         if (!updateFn) {
@@ -129,9 +138,9 @@ export class TaskStep {
                 }
             } else {
                 if (newVal == oldVal) { continue }
-                if (oldVal == null) {
+                if (oldVal == null && newVal != null) {
                     action = 'insert'
-                } else if (newVal == null) {
+                } else if (oldVal != null && newVal == null) {
                     action = 'delete'
                 } else {
                     action = 'update'
@@ -158,23 +167,34 @@ export class TaskStep {
 
             if (bucketName && propObjName) {
                 const bucket = client.bucket(bucketName);
+
+                const objExists = (o: any) => !!o?.id
+
                 if (Array.isArray(oldVal)) {
-                    oldVal = oldObj?.[propObjName]?.map((v: any) =>
-                        ({ id: v.id, alias: Bucket.getAlias(bucket, v) })
-                    )
+                    oldVal = oldObj?.[propObjName]
+                        ?.filter(objExists)
+                        ?.map((v: any) =>
+                            ({ id: v.id, alias: Bucket.getAlias(bucket, v) })
+                        )
                 }
                 else {
                     const v = oldObj?.[propObjName];
-                    oldVal = v ? { id: v.id, alias: Bucket.getAlias(bucket, v) } : undefined
+                    oldVal = objExists(v)
+                        ? { id: v.id, alias: Bucket.getAlias(bucket, v) }
+                        : undefined
                 }
                 if (Array.isArray(newVal)) {
-                    newVal = newObj?.[propObjName]?.map((v: any) =>
-                        ({ id: v.id, alias: Bucket.getAlias(bucket, v) })
-                    )
+                    newVal = newObj?.[propObjName]
+                        ?.filter(objExists)
+                        ?.map((v: any) =>
+                            ({ id: v.id, alias: Bucket.getAlias(bucket, v) })
+                        )
                 }
                 else {
                     const v = newObj?.[propObjName];
-                    newVal = v ? { id: v.id, alias: Bucket.getAlias(bucket, v) } : undefined
+                    newVal = objExists(v)
+                        ? { id: v.id, alias: Bucket.getAlias(bucket, v) }
+                        : undefined
                 }
             }
 
@@ -776,7 +796,15 @@ export class Task<
         if (!task.output.data) {
             task.output.data = {}
         }
-        Object.assign(task.input, event)
+
+        for (const k in event) {
+            if (event[k] === deleteSymbol) {
+                delete task.input[k]
+            } else {
+                task.input[k] = event[k]
+            }
+        }
+
         Object.assign(task.output.data, outcome)
 
         // 4. Update task on data source
