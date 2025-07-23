@@ -154,5 +154,45 @@ export class TaskGraph {
         this.affectedTasks[from.id] = from
     }
 
+    //
+
+    public async linkCustom(toTaskId: number, fromName: string, toName: string) {
+        const toTask = await this.getTask(toTaskId);
+        this._addCustom(this.task, toTask, fromName);
+        this._addCustom(toTask, this.task, toName);
+    }
+
+    private _addCustom(from: TaskModel, to:TaskModel, name: string) {
+        if (from.graph.links?.some(link =>
+            link.relation === name && link.task_id === to.id)) {
+            return
+        }
+        from.graph.links?.push({
+            relation: name as any,
+            task_id: to.id,
+            created_by: this.client.user.id,
+            created_at: NesoiDate.isoNow()
+        })
+        this.logs.push({
+            type: 'link',
+            from_task_id: from.id,
+            to_task_id: to.id,
+            relation: name as any
+        })
+        this.affectedTasks[from.id] = from
+    }
+
+    public async unlinkCustom(toTaskId: number, fromName: string, toName: string) {
+        const toTask = await this.getTask(toTaskId);
+        this._removeCustom(this.task, toTask, fromName);
+        this._removeCustom(toTask, this.task, toName);
+    }
+
+    private _removeCustom(from: TaskModel, to: TaskModel, name: string) {
+        from.graph.links?.filter(link => 
+            !(link.relation === name && link.task_id === to.id))
+        this.affectedTasks[from.id] = from
+    }
+
 
 }
