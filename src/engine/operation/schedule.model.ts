@@ -26,7 +26,7 @@ export interface ScheduleModel extends ResourceObj {
     id: number,
     state: ScheduleState
     task_id: number
-    schedulable_id: number
+    schedulable_id?: number
     start_datetime: string
     end_datetime: string
     outcome: ScheduleOutcome

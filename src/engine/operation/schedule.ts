@@ -23,7 +23,7 @@ export const ScheduleResource = (
         .create($ => $
             .event($ => ({
                 task_id: $('Task ID').int,
-                schedulable_id: $('Schedulable ID').int,
+                schedulable_id: $('Schedulable ID').int.optional(),
                 start_datetime: $('Start').datetime,
                 end_datetime: $('End').datetime
             }))
