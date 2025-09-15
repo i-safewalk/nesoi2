@@ -14,7 +14,7 @@ type MyClient = {
 
 export const Nesoi = new NesoiEngine({
   $client: {} as MyClient,
-  sources: { 
+  sources: {
     'fireball': FireballBucket
   }
 })
@@ -28,6 +28,7 @@ const FireballEvent = Nesoi.event('fireball')
             speed: $('Velocidade').int
         },
         points: $('Pontos').int.array(),
+        meta: $('Meta').object,
         fireball_id: $('ID').id('fireball').array()
     }))
     .alias('Bola de fogo!')
@@ -43,6 +44,10 @@ async function main() {
             speed: 10
         },
         points: [1, 2, 3],
+        meta: {
+            'cast_player': 20,
+            'target_player': 23
+        },
         fireball_id: [1,33]
     })
 
