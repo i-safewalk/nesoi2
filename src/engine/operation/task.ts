@@ -123,7 +123,12 @@ export class TaskStep {
             let newVal = newObj[key];
             if (prop.isArray) {
                 const sameLength = oldVal?.length === newVal?.length
-                const areEqual = oldVal?.every((item: any) => newVal?.includes(item))
+                const areEqual = oldVal?.every((oldItem: any) => {
+                    if (typeof oldItem === 'object') {
+                        return newVal?.some((newItem: any) => JSON.stringify(oldItem) === JSON.stringify(newItem))
+                    }
+                    return newVal?.includes(oldItem)
+                })
                 const isOldEmpty = oldVal == null || oldVal?.length === 0
                 const isNewEmpty = newVal == null || newVal?.length === 0
                 if (sameLength && areEqual) {

@@ -1,8 +1,8 @@
 /**
  * [ EventParser ]
- * 
+ *
  * A schema for validating events.
- * 
+ *
 */
 
 import { NesoiClient } from "../../client"
@@ -227,6 +227,27 @@ export function EventParserPropFactory(
                     }
                 }
                 throw NesoiError.Event.Parse(prop, 'a string')
+            }),
+
+        object: new EventParserPropBuilder<Record<string, any>, Record<string, any>>(alias,
+            (client, prop, propName, value) => {
+                if (
+                    typeof value === 'string' ||
+                    (typeof value === 'object' && !Array.isArray(value) && value !== null)
+                ) {
+                    let val;
+                    try {
+                        val = typeof value === 'string'
+                            ? JSON.parse(value)
+                            : { ...value }
+                    } catch {
+                        throw NesoiError.Event.Sanitize('Invalid JSON string for object type')
+                    }
+                    return {
+                        [propName]: val
+                    }
+                }
+                throw NesoiError.Event.Parse(prop, 'an object')
             }),
 
     }
