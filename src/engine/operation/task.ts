@@ -50,13 +50,13 @@ export class TaskStep {
             if (typeof this.conditionsAndExtras[i] === 'function') {
                 const extra = this.conditionsAndExtras[i] as TaskMethod<any, any, any, any>;
                 await Extra.run(extra,
-                    { client, event, input: taskInput },
+                    { client, event, input: taskInput, id: taskId },
                     event, stepData)
             }
             else {
                 const condition = this.conditionsAndExtras[i] as TaskCondition<any, any, any>;
                 await Condition.check(condition,
-                    { client, event, input: taskInput })
+                    { client, event, input: taskInput, id: taskId })
             }
         }
 
@@ -77,13 +77,13 @@ export class TaskStep {
             if (typeof this.conditionsAndExtras[i] === 'function') {
                 const extra = this.conditionsAndExtras[i] as TaskMethod<any, any, any, any>;
                 await Extra.run(extra,
-                    { client, event, input: taskInput },
+                    { client, event, input: taskInput, id: taskId },
                     event, stepData)
             }
             else {
                 const condition = this.conditionsAndExtras[i] as TaskCondition<any, any, any>;
                 await Condition.check(condition,
-                    { client, event, input: taskInput })
+                    { client, event, input: taskInput, id: taskId })
             }
         }
 
@@ -221,13 +221,13 @@ export class TaskStep {
             if (typeof this.conditionsAndExtras[i] === 'function') {
                 const extra = this.conditionsAndExtras[i] as TaskMethod<any, any, any, any>;
                 await Extra.run(extra,
-                    { client, event, input: taskInput },
+                    { client, event, input: taskInput, id: taskId },
                     event, stepData)
             }
             else {
                 const condition = this.conditionsAndExtras[i] as TaskCondition<any, any, any>;
                 await Condition.check(condition,
-                    { client, event, input: taskInput })
+                    { client, event, input: taskInput, id: taskId })
             }
         }
 
@@ -247,13 +247,13 @@ export class TaskStep {
             if (typeof this.conditionsAndExtras[i] === 'function') {
                 const extra = this.conditionsAndExtras[i] as TaskMethod<any, any, any, any>;
                 await Extra.run(extra,
-                    { client, event, input: taskInput },
+                    { client, event, input: taskInput, id: taskId },
                     event, stepData)
             }
             else {
                 const condition = this.conditionsAndExtras[i] as TaskCondition<any, any, any>;
                 await Condition.check(condition,
-                    { client, event, input: taskInput })
+                    { client, event, input: taskInput, id: taskId })
             }
         }
 
